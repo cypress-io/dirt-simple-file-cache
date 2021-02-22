@@ -1,4 +1,4 @@
-# disifica [![](https://github.com/thlorenz/disifica/workflows/Node/badge.svg?branch=master)](https://github.com/thlorenz/disifica/actions)
+# dirt-simple-file-cache [![](https://github.com/thlorenz/dirt-simple-file-cache/workflows/Node/badge.svg?branch=master)](https://github.com/thlorenz/dirt-simple-file-cache/actions)
 
 Dirt Simple File Cache based on mtime.
 
@@ -7,22 +7,22 @@ Dirt Simple File Cache based on mtime.
 ```typescript
 import path from 'path'
 import { strict as assert } from 'assert'
-import { Disifica } from 'disifica'
+import { DirtSimpleFileCache } from 'dirt-simple-file-cache'
   
 function async doMyThing(projectRoot: string) {
-  const disifica = await Disifica.init(projectRoot)
+  const dirtSimpleFileCache = await DirtSimpleFileCache.init(projectRoot)
   
   // Clear cache f you want to start fresh 
-  await disifica.clear()
+  await dirtSimpleFileCache.clear()
 
   const foo = path.join(projectRoot, '/some/file/foo.ts')
   const bar = path.join(projectRoot, '/some/file/bar.ts')
 
   const converted = convertMyFile(foo)
-  disifica.add(foo, converted)
+  dirtSimpleFileCache.add(foo, converted)
   
-  const cachedFoo = disifica.get(foo)
-  const cachedBar = disifica.get(bar)
+  const cachedFoo = dirtSimpleFileCache.get(foo)
+  const cachedBar = dirtSimpleFileCache.get(bar)
   
   assert(cachedFoo === converted)
   assert(cachedBar == null)

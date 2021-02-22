@@ -5,18 +5,23 @@ import path from 'path'
 
 const DEFAULT_CACHE_DIR = tmpdir()
 
-export class Disifica {
+export class DirtSimpleFileCache {
   private readonly _cacheDir: string
   private constructor(
     private readonly _projectBaseDir: string,
     readonly cacheDir: string
   ) {
-    this._cacheDir = path.join(cacheDir, 'disifica')
+    this._cacheDir = path.join(cacheDir, 'dirt-simple-file-cache')
   }
 
   static async init(projectBasedir: string, cacheDir = DEFAULT_CACHE_DIR) {
     await fsp.mkdir(cacheDir, { recursive: true })
-    return new Disifica(projectBasedir, cacheDir)
+    return new DirtSimpleFileCache(projectBasedir, cacheDir)
+  }
+
+  static initSync(projectBasedir: string, cacheDir = DEFAULT_CACHE_DIR) {
+    fs.mkdirSync(cacheDir, { recursive: true })
+    return new DirtSimpleFileCache(projectBasedir, cacheDir)
   }
 
   get(fullPath: string): string | undefined {
@@ -39,6 +44,10 @@ export class Disifica {
 
   clear() {
     return fsp.rmdir(this._cacheDir, { recursive: true })
+  }
+
+  clearSync() {
+    fs.rmdirSync(this._cacheDir, { recursive: true })
   }
 
   _resolveCachePath(fullPath: string) {
