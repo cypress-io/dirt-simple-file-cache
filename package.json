@@ -1,0 +1,28 @@
+{
+  "name": "disifica",
+  "version": "0.0.0",
+  "description": "Dirt Simple File Cache based on mtime.",
+  "main": "dist/src/disifica.js",
+  "types": "src/disifica.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "tape ./dist/tests/*.js"
+  },
+  "repository": "git@github.com:thlorenz/disifica.git",
+  "author": "Thorsten Lorenz <thlorenz@gmx.de>",
+  "license": "MIT",
+  "private": false,
+  "directories": {
+    "dist": "./dist/src"
+  },
+  "dependencies": {
+    "debug": "^4.3.1"
+  },
+  "devDependencies": {
+    "@types/debug": "^4.1.5",
+    "@types/tape": "^4.13.0",
+    "prettier": "^2.2.1",
+    "tape": "^5.1.1",
+    "typescript": "^4.1.3"
+  }
+}
