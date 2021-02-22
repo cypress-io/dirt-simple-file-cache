@@ -5,6 +5,7 @@
   "main": "dist/src/dirt-simple-file-cache.js",
   "types": "src/dirt-simple-file-cache.ts",
   "scripts": {
+    "prepublish": "yarn build",
     "build": "tsc",
     "test": "ts-node ./tests/*.ts",
     "lint": "prettier -c ./src/ && prettier -c ./tests/"
