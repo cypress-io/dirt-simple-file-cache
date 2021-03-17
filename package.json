@@ -18,7 +18,9 @@
     "dist": "./dist/src"
   },
   "files": [
-    "./dist/src/*"
+    "dirt-simple-file-cache.d.ts",
+    "dirt-simple-file-cache.js",
+    "dirt-simple-file-cache.js.map"
   ],
   "dependencies": {
     "tslib": "^2.1.0"
