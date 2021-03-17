@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "Dirt Simple File Cache based on mtime.",
   "main": "dist/src/dirt-simple-file-cache.js",
-  "types": "src/dirt-simple-file-cache.ts",
+  "types": "dist/src/dirt-simple-file-cache.d.ts",
   "scripts": {
     "prepublish": "yarn build",
     "build": "tsc",
