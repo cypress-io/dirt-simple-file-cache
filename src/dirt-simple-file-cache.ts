@@ -4,6 +4,7 @@ import fs from 'fs'
 import path from 'path'
 
 import debug from 'debug'
+const logError = debug('dsfc:error')
 const logTrace = debug('dsfc:trace')
 const logDebug = debug('dsfc:debug')
 const logInfo = debug('dsfc:info')
@@ -66,12 +67,29 @@ export class DirtSimpleFileCache {
     return fs.readFileSync(cachedPath, 'utf8')
   }
 
-  add(origFullPath: string, convertedContent: string) {
+  /**
+   * Asynchronously writes the file to the cache directory.
+   * All errors are handled (`DEBUG=dsfd*error*`), so the caller doesn't need
+   * to `await` the result, but can fire/forget.
+   */
+  async add(origFullPath: string, convertedContent: string) {
     const cachePath = this._resolveCachePath(origFullPath)
     const cachePathDir = path.dirname(cachePath)
     logDebug('adding "%s" to cache', origFullPath)
-    fs.mkdirSync(cachePathDir, { recursive: true })
-    fs.writeFileSync(cachePath, convertedContent)
+    try {
+      await fs.promises.mkdir(cachePathDir, { recursive: true })
+    } catch (err) {
+      logError('Failed to create directory %s', cachePathDir)
+      logError(err)
+    }
+    try {
+      await fs.promises.writeFile(cachePath, convertedContent)
+    } catch (err) {
+      logError('Failed to write file %s', cachePath)
+      logError(err)
+    } finally {
+      logDebug('added "%s" to cache', origFullPath)
+    }
   }
 
   clear() {
