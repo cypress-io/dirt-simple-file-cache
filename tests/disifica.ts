@@ -19,7 +19,7 @@ async function addUpperCase(
 ) {
   const content = await fs.readFile(fullPath, 'utf8')
   const upperCase = content.toUpperCase()
-  return dirtSimpleFileCache.add(fullPath, upperCase)
+  return dirtSimpleFileCache.addAsync(fullPath, upperCase)
 }
 
 test('dirt-simple-file-cache', async (t) => {

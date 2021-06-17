@@ -31,18 +31,19 @@ export class DirtSimpleFileCache {
     return new DirtSimpleFileCache(projectBasedir, cacheDir)
   }
 
-  get(fullPath: string): string | undefined {
+  get(fullPath: string, skipStaleCheck: boolean = false): string | undefined {
     const cachedPath = this._resolveCachePath(fullPath)
     if (!canAccessSync(cachedPath)) {
       logDebug('cache miss "%s"', fullPath)
       return
     }
 
-    const { mtime: currentTime } = fs.statSync(fullPath)
-    const { mtime: cachedTime } = fs.statSync(cachedPath)
-    if (logTrace.enabled) {
-      // prettier-ignore
-      logTrace(
+    if (!skipStaleCheck) {
+      const { mtime: currentTime } = fs.statSync(fullPath)
+      const { mtime: cachedTime } = fs.statSync(cachedPath)
+      if (logTrace.enabled) {
+        // prettier-ignore
+        logTrace(
       'loading [%s] "%s"\n' +
       'cached  [%s] "%s"',
       currentTime.toLocaleString(),
@@ -50,18 +51,19 @@ export class DirtSimpleFileCache {
       cachedTime.toLocaleString(),
       cachedPath
     )
-    }
-
-    if (currentTime > cachedTime) {
-      if (logDebug.enabled) {
-        logDebug(
-          'outdated "%s" [%s] < [%s])',
-          fullPath,
-          cachedTime.toLocaleString(),
-          currentTime.toLocaleString()
-        )
       }
-      return
+
+      if (currentTime > cachedTime) {
+        if (logDebug.enabled) {
+          logDebug(
+            'outdated "%s" [%s] < [%s])',
+            fullPath,
+            cachedTime.toLocaleString(),
+            currentTime.toLocaleString()
+          )
+        }
+        return
+      }
     }
     logDebug('cache hit: "%s"', fullPath)
     return fs.readFileSync(cachedPath, 'utf8')
@@ -72,7 +74,7 @@ export class DirtSimpleFileCache {
    * All errors are handled (`DEBUG=dsfd*error*`), so the caller doesn't need
    * to `await` the result, but can fire/forget.
    */
-  async add(origFullPath: string, convertedContent: string) {
+  async addAsync(origFullPath: string, convertedContent: string) {
     const cachePath = this._resolveCachePath(origFullPath)
     const cachePathDir = path.dirname(cachePath)
     logDebug('adding "%s" to cache', origFullPath)
@@ -84,6 +86,31 @@ export class DirtSimpleFileCache {
     }
     try {
       await fs.promises.writeFile(cachePath, convertedContent)
+    } catch (err) {
+      logError('Failed to write file %s', cachePath)
+      logError(err)
+    } finally {
+      logDebug('added "%s" to cache', origFullPath)
+    }
+  }
+
+  /**
+   * Synchronously writes the file to the cache directory.
+   * All errors are handled (`DEBUG=dsfd*error*`), so the caller doesn't need
+   * to handle them.
+   */
+  add(origFullPath: string, convertedContent: string) {
+    const cachePath = this._resolveCachePath(origFullPath)
+    const cachePathDir = path.dirname(cachePath)
+    logDebug('adding "%s" to cache', origFullPath)
+    try {
+      fs.mkdirSync(cachePathDir, { recursive: true })
+    } catch (err) {
+      logError('Failed to create directory %s', cachePathDir)
+      logError(err)
+    }
+    try {
+      fs.writeFileSync(cachePath, convertedContent)
     } catch (err) {
       logError('Failed to write file %s', cachePath)
       logError(err)
