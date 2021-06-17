@@ -1,6 +1,6 @@
 {
   "name": "dirt-simple-file-cache",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Dirt Simple File Cache based on mtime.",
   "main": "dist/src/dirt-simple-file-cache.js",
   "types": "dist/src/dirt-simple-file-cache.d.ts",
