@@ -9,48 +9,112 @@ const logTrace = debug('dsfc:trace')
 const logDebug = debug('dsfc:debug')
 const logInfo = debug('dsfc:info')
 
+/**
+ * Options that configure the [DirtSimpleFileCache].
+ *
+ * NOTE: if an in memory cache is used contents stored in it are not checked for staleness
+ *
+ * @property cacheDir: location on disk where cache is located
+ * @property keepInMemoryCache: if `true` file contents are kept in an in memory cache as well as on the file system
+ */
+export type DirtSimpleFileCacheOpts = {
+  cacheDir: string
+  keepInMemoryCache: boolean
+}
+
 const DEFAULT_CACHE_DIR = tmpdir()
+const DEFAULT_OPTS: DirtSimpleFileCacheOpts = {
+  cacheDir: DEFAULT_CACHE_DIR,
+  keepInMemoryCache: false,
+}
 
 export class DirtSimpleFileCache {
   private readonly _cacheDir: string
+  private readonly _inMemoryCache: Map<string, string> = new Map()
+
   private constructor(
     private readonly _projectBaseDir: string,
+    private readonly _keepInMemoryCache: boolean,
     readonly cacheDir: string
   ) {
     this._cacheDir = path.join(cacheDir, 'dirt-simple-file-cache')
     logInfo('initialized dirt-simple-file-cache at %s', this._cacheDir)
   }
 
-  static async init(projectBasedir: string, cacheDir = DEFAULT_CACHE_DIR) {
+  /**
+   * Inits the file cache asynchronously
+   *
+   * @param projectBasedir root directory of the project whose converted files we are caching
+   * @param opts configure location and behavior of the cache
+   */
+  static async init(
+    projectBasedir: string,
+    opts: Partial<DirtSimpleFileCacheOpts> = {}
+  ) {
+    const { cacheDir, keepInMemoryCache } = Object.assign(
+      {},
+      DEFAULT_OPTS,
+      opts
+    )
     await fsp.mkdir(cacheDir, { recursive: true })
-    return new DirtSimpleFileCache(projectBasedir, cacheDir)
+    return new DirtSimpleFileCache(projectBasedir, keepInMemoryCache, cacheDir)
   }
 
-  static initSync(projectBasedir: string, cacheDir = DEFAULT_CACHE_DIR) {
+  /**
+   * Inits the file cache synchronously
+   *
+   * @param projectBasedir root directory of the project whose converted files we are caching
+   * @param opts configure location and behavior of the cache
+   */
+  static initSync(
+    projectBasedir: string,
+    opts: Partial<DirtSimpleFileCacheOpts> = {}
+  ) {
+    const { cacheDir, keepInMemoryCache } = Object.assign(
+      {},
+      DEFAULT_OPTS,
+      opts
+    )
     fs.mkdirSync(cacheDir, { recursive: true })
-    return new DirtSimpleFileCache(projectBasedir, cacheDir)
+    return new DirtSimpleFileCache(projectBasedir, keepInMemoryCache, cacheDir)
   }
 
   get(fullPath: string, skipStaleCheck: boolean = false): string | undefined {
+    // -----------------
+    // Check in memory cache
+    // -----------------
+    if (this._keepInMemoryCache) {
+      const fromMemory = this._inMemoryCache.get(fullPath)
+      if (fromMemory != null) {
+        logDebug('mem cache hit: "%s"', fullPath)
+        return fromMemory
+      }
+    }
+
+    // -----------------
+    // Check if cached file even exists
+    // -----------------
     const cachedPath = this._resolveCachePath(fullPath)
     if (!canAccessSync(cachedPath)) {
       logDebug('cache miss "%s"', fullPath)
       return
     }
 
+    // -----------------
+    // Check if cached file is newer than the original
+    // -----------------
     if (!skipStaleCheck) {
       const { mtime: currentTime } = fs.statSync(fullPath)
       const { mtime: cachedTime } = fs.statSync(cachedPath)
       if (logTrace.enabled) {
         // prettier-ignore
         logTrace(
-      'loading [%s] "%s"\n' +
-      'cached  [%s] "%s"',
-      currentTime.toLocaleString(),
-      fullPath,
-      cachedTime.toLocaleString(),
-      cachedPath
-    )
+          'loading [%s] "%s"\n' +
+          'cached  [%s] "%s"',
+          currentTime.toLocaleString(),
+          fullPath,
+          cachedTime.toLocaleString(),
+          cachedPath)
       }
 
       if (currentTime > cachedTime) {
@@ -65,8 +129,16 @@ export class DirtSimpleFileCache {
         return
       }
     }
+
+    // -----------------
+    // Add file loaded from file cache into memory cache and return it
+    // -----------------
     logDebug('cache hit: "%s"', fullPath)
-    return fs.readFileSync(cachedPath, 'utf8')
+    const resource = fs.readFileSync(cachedPath, 'utf8')
+    if (this._keepInMemoryCache) {
+      this._inMemoryCache.set(fullPath, resource)
+    }
+    return resource
   }
 
   /**
@@ -100,6 +172,16 @@ export class DirtSimpleFileCache {
    * to handle them.
    */
   add(origFullPath: string, convertedContent: string) {
+    // -----------------
+    // Add to in memory cache
+    // -----------------
+    if (this._keepInMemoryCache) {
+      this._inMemoryCache.set(origFullPath, convertedContent)
+    }
+
+    // -----------------
+    // Resolve and prepare file cache directory
+    // -----------------
     const cachePath = this._resolveCachePath(origFullPath)
     const cachePathDir = path.dirname(cachePath)
     logDebug('adding "%s" to cache', origFullPath)
@@ -109,6 +191,10 @@ export class DirtSimpleFileCache {
       logError('Failed to create directory %s', cachePathDir)
       logError(err)
     }
+
+    // -----------------
+    // Write file to file cache
+    // -----------------
     try {
       fs.writeFileSync(cachePath, convertedContent)
     } catch (err) {
@@ -121,11 +207,13 @@ export class DirtSimpleFileCache {
 
   clear() {
     logInfo('clearing cache')
+    this._inMemoryCache.clear()
     return fsp.rmdir(this._cacheDir, { recursive: true })
   }
 
   clearSync() {
     logInfo('clearing cache')
+    this._inMemoryCache.clear()
     fs.rmdirSync(this._cacheDir, { recursive: true })
   }
 

@@ -31,12 +31,15 @@ function async doMyThing(projectRoot: string) {
 
 The above works across runs as the cache is persisted to a tmp folder.
 
-## Non Features
+## Extra Features
 
-In memory cache:
+If `keepInMemoryCache: true` is passed as `opts` then an in memory cache is used. This cache is
+not checked for staleness.
 
-Since this is supposed to be _dirt simple_ it does not maintain a cache in memory, i.e.
-_mtimes_ are compared via `fs` operations and cached content is retrieved the same way.
+For the file cache  _mtimes_ are compared via `fs` operations and cached content is retrieved the same way.
+
+Therefore it is advisable to not keep an in memory cache if you expect your original assets to
+change while the program is running.
 
 ## LICENSE
 
